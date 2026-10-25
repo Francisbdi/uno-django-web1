@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO Web 1v1 — Jogador vs Computador | Django N1</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+</head>
+<body>
+    <!-- Barra Superior -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="uno-logo-badge">UNO</div>
+            <div class="brand-title">
+                <h1>UNO Web — Duelo 1v1</h1>
+                <span>Desenvolvimento Web 1 • Projeto N1 (Django + SQLite)</span>
+            </div>
+        </div>
+
+        <div class="score-pills">
+            <div class="score-pill player-score">
+                <span>👤 Você:</span>
+                <strong id="top-player-wins">{{ initial_stats.vitorias_jogador|default:0 }}</strong>
+            </div>
+            <span class="score-divider">|</span>
+            <div class="score-pill bot-score">
+                <span>🤖 Bot:</span>
+                <strong id="top-bot-wins">{{ initial_stats.vitorias_bot|default:0 }}</strong>
+            </div>
+            <span class="score-divider">|</span>
+            <div class="score-pill turns-pill">
+                <span>⏱️ Turno:</span>
+                <strong id="turn-counter">1</strong>
+            </div>
+        </div>
+
+        <div class="top-actions">
+            <button type="button" id="sound-toggle-btn" class="btn">🔊 Som: ON</button>
+            <button type="button" id="rules-btn" class="btn">📖 Regras</button>
+            <button type="button" id="new-game-btn" class="btn btn-primary">🔄 Nova Partida</button>
+        </div>
+    </header>
+
+    <!-- Layout Principal -->
+    <main class="game-layout">
+        <!-- Mesa de Jogo -->
+        <section id="table-area" class="table-area" data-active-color="red">
+            <!-- Área do Bot Adversário -->
+            <div class="bot-zone">
+                <div class="competitor-header">
+                    <div class="avatar-circle">🤖</div>
+                    <span class="competitor-name">Computador (IA)</span>
+                    <span id="bot-card-count" class="card-count-badge">7 cartas</span>
+                    <span id="bot-uno-badge" class="uno-tag" style="display: none;">🔥 UNO!</span>
+                </div>
+                <div id="bot-hand" class="bot-hand" aria-label="Cartas do Bot"></div>
+            </div>
+
+            <!-- Centro da Mesa: Status + Monte de Compra + Descarte -->
+            <div class="center-arena">
+                <div class="status-banner">
+                    <span id="turn-badge" class="turn-badge player-turn">SUA VEZ</span>
+                    <span id="status-message">Carregando partida...</span>
+                    <button type="button" id="pass-turn-btn" class="btn btn-warning" style="display: none;">
+                        ⏭️ Passar Vez
+                    </button>
+                </div>
+
+                <div class="piles-row">
+                    <!-- Monte de Compra -->
+                    <div class="pile-slot">
+                        <span class="pile-label">Monte de Compra</span>
+                        <button type="button" id="draw-pile-btn" class="draw-pile-btn" title="Clique para comprar 1 carta">
+                            <div class="draw-pile-oval">
+                                <span>UNO</span>
+                            </div>
+                            <span id="draw-hint" class="draw-Action-hint">Comprar +1</span>
+                        </button>
+                        <span id="deck-count" class="history-meta" style="margin-top: 0.45rem;">85 no monte</span>
+                    </div>
+
+                    <!-- Topo do Descarte -->
+                    <div class="pile-slot">
+                        <span class="pile-label">Topo do Descarte</span>
+                        <div id="discard-pile-slot"></div>
+                        <span id="active-card-info" class="history-meta" style="margin-top: 0.45rem; font-weight: 700; color: #f8fafc;">
+                            -
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Área da Mão do Jogador -->
+            <div class="player-zone">
+                <div class="player-header-row">
+                    <div class="competitor-header">
+                        <div class="avatar-circle">🧑‍💻</div>
+                        <span class="competitor-name">Sua Mão</span>
+                        <span id="player-card-count" class="card-count-badge">7 cartas</span>
+                        <span id="player-uno-badge" class="uno-tag" style="display: none;">🔥 UNO!</span>
+                    </div>
+                    <span class="history-meta">
+                        💡 Dica: As cartas com <strong>borda verde brilhante</strong> combinam com a mesa e podem ser jogadas!
+                    </span>
+                </div>
+                <div id="player-hand" class="player-hand-container" aria-label="Suas Cartas"></div>
+            </div>
+        </section>
+
+        <!-- Barra Lateral: Placar Geral, Log da Partida e Histórico SQLite -->
+        <aside class="sidebar">
+            <!-- Placar Geral Acumulado -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h2>📊 Placar Geral (SQLite)</h2>
+                    <span id="stat-win-rate" class="card-count-badge">0% vitórias</span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span id="stat-player-wins" class="stat-value" style="color: #34d399;">0</span>
+                        <span class="stat-label">Suas Vitórias</span>
+                    </div>
+                    <div class="stat-box">
+                        <span id="stat-bot-wins" class="stat-value" style="color: #f87171;">0</span>
+                        <span class="stat-label">Vitórias Bot</span>
+                    </div>
+                    <div class="stat-box">
+                        <span id="stat-total-matches" class="stat-value" style="color: #fbbf24;">0</span>
+                        <span class="stat-label">Partidas</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registro de Jogadas da Rodada -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h2>⚡ Ações da Partida</h2>
+                </div>
+                <ul id="match-log" class="log-list"></ul>
+            </div>
+
+            <!-- Histórico de Partidas Salvo no Banco -->
+            <div class="panel-card" style="flex: 1;">
+                <div class="panel-header">
+                    <h2>🕒 Histórico de Partidas</h2>
+                    <button type="button" id="clear-history-btn" class="btn btn-danger-outline" style="padding: 0.25rem 0.55rem; font-size: 0.72rem;">
+                        Limpar
+                    </button>
+                </div>
+                <div id="history-list" class="history-list"></div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modal de Fim de Jogo -->
+    <div id="endgame-modal" class="modal-backdrop">
+        <div class="modal-box">
+            <h3 id="endgame-title">🏆 Fim de Jogo!</h3>
+            <p id="endgame-desc"></p>
+            <div style="display: flex; justify-content: center; gap: 0.75rem;">
+                <button type="button" id="rematch-btn" class="btn btn-primary">🔄 Jogar Novamente</button>
+                <button type="button" id="close-endgame-btn" class="btn">Ver Mesa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Regras -->
+    <div id="rules-modal" class="modal-backdrop">
+        <div class="modal-box">
+            <h3>📖 Regras do UNO (1v1)</h3>
+            <p>Vença o Computador descartando todas as cartas da sua mão primeiro!</p>
+            <ul class="rules-list">
+                <li><strong>Distribuição Inicial:</strong> Você e o Bot começam com <strong>7 cartas</strong> cada, e 1 carta numérica abre a pilha de descarte.</li>
+                <li><strong>Como Jogar:</strong> Na sua vez, clique em uma carta da sua mão que combine em <strong>Cor</strong> (Vermelho, Azul, Verde ou Amarelo) ou em <strong>Número/Símbolo</strong> com a carta do topo da mesa.</li>
+                <li><strong>Cartas de Ação no 1v1:</strong>
+                    <br>• <strong>⊘ Pular Vez:</strong> O oponente perde o turno e quem jogou joga novamente.
+                    <br>• <strong>⇄ Inverter:</strong> Em partidas de 2 jogadores, equivale a Pular Vez — você joga de novo!
+                    <br>• <strong>+2 Comprar 2:</strong> O oponente compra 2 cartas imediatamente e perde a vez!
+                </li>
+                <li><strong>Monte de Compra:</strong> Se não tiver carta válida, clique no <strong>Monte de Compra</strong> para puxar 1 carta. Se ela servir, você pode jogá-la na hora ou passar a vez.</li>
+                <li><strong>Vitória:</strong> O primeiro a ficar com <strong>0 cartas</strong> vence e a partida é salva automaticamente no banco de dados SQLite!</li>
+            </ul>
+            <button type="button" id="close-rules-btn" class="btn btn-primary">Entendi, Vamos Jogar!</button>
+        </div>
+    </div>
+
+    <script src="{% static 'core/js/game.js' %}"></script>
+</body>
+</html>
+

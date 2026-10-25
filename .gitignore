@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ambientes virtuais Python
+.venv/
+venv/
+ENV/
+env/
+
+# Banco de dados local e arquivos temporários do Django
+db.sqlite3
+db.sqlite3-journal
+*.log
+local_settings.py
+
+# Arquivos estáticos coletados para produção e uploads
+staticfiles/
+media/
+
+# Configurações de IDEs e Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Variáveis de ambiente
+.env
+.env.*
+
